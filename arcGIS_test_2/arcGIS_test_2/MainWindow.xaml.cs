@@ -23,14 +23,10 @@ namespace arcGIS_test_2
     /// </summary>
     public partial class MainWindow : Window
     {
+        // la is 34.02209° N, -118.2852° E
         public MainWindow()
         {
             InitializeComponent();
-            // create a new Map with a streets basemap 
-            // var map = new Map(Basemap.CreateStreets());
-
-            // assign the map to MyMapView (MapView control) 
-            // MySceneView.ma = map;
 
             MySceneView.Scene = new Scene(Basemap.CreateImagery());
             // Add San Diego scene layer.  Example scene layers provided by Esri available here: http://www.arcgis.com/home/group.html?id=c4a19ab700fd4654b89a319b016eee03
@@ -41,8 +37,11 @@ namespace arcGIS_test_2
 
             // Define rendering mode for VR experience.  
             MySceneView.StereoRendering = new SideBySideBarrelDistortionStereoRendering();
-
             MySceneView.IsAttributionTextVisible = false;
+
+            var camera = new Camera(34.02209, -118.2853, 1000, 0, 45, 0);
+            MySceneView.SetViewpointCamera(camera);
+
         }
     }
 }
