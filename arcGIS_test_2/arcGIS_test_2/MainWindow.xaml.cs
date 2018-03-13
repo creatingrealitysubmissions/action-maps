@@ -59,7 +59,7 @@ namespace arcGIS_test_2
             go.SceneProperties.SurfacePlacement = SurfacePlacement.Relative;
             var rnd = new System.Random();
 
-            for (int i = 0; i < 10000; i++)
+            for (int i = 0; i < 50; i++)
             {
 
 
