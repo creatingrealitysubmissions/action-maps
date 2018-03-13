@@ -1,1 +1,7 @@
 third_party_sdks
+
+bin/*
+lib/*
+obj/*
+packages/*
+.vs
