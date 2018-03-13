@@ -7,9 +7,7 @@
         xmlns:esri="http://schemas.esri.com/arcgis/runtime/2013"
         mc:Ignorable="d"
         Title="MainWindow" Height="350" Width="525">
-    <esri:SceneView x:Name="MySceneView">
-        
-    </esri:SceneView>
+    <esri:SceneView x:Name="MySceneView"></esri:SceneView>
     <!--
     <esri:MapView>
         <esri:Map x:Name="MySceneView">
