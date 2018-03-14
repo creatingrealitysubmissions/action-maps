@@ -172,7 +172,10 @@ namespace arcGIS_test_2
                         {
                             lo = plane.Long.Value;
                             la = plane.Lat.Value;
-                            al = plane.Alt.Value;
+                            if(plane.Alt != null)
+                            { 
+                                al = plane.Alt.Value;
+                            }
                         }
                         catch (Exception)
                         {
@@ -205,13 +208,62 @@ namespace arcGIS_test_2
                 Application.Current.Dispatcher.Invoke(
                     () =>
                     {
-        
                         MySceneView.Scene.OperationalLayers.Add(agsl);
                     });
                
                 Debug.WriteLine("building load status: " + agsl.LoadStatus);
             });
                 
+        }
+        GraphicsOverlay metro;
+        public void metro_data()
+        {
+            /* first get stops */
+            Task.Factory.StartNew(async () =>
+            {
+                Uri u = new System.Uri("https://services1.arcgis.com/gOY38HDnFUYPDony/ArcGIS/rest/services/la_busstops1217/FeatureServer/1");
+
+                var agsl_stop = new ServiceFeatureTable(u);
+                await agsl_stop.LoadAsync();
+                Application.Current.Dispatcher.Invoke(
+                    () =>
+                    {
+                        var stopsLayer = new Esri.ArcGISRuntime.Mapping.FeatureLayer(agsl_stop);
+                        MySceneView.Scene.OperationalLayers.Add(stopsLayer);
+                    });
+
+                Debug.WriteLine("busstop: " + agsl_stop.LoadStatus);
+            });
+            
+            /* then get vehicles */
+
+            WebClient client = new WebClient();
+            var wgs84 = MySceneView.Scene.SpatialReference;
+
+            metro = new GraphicsOverlay();
+            metro.SceneProperties.SurfacePlacement = SurfacePlacement.Draped;
+
+            Task.Factory.StartNew(async () => {
+                while (true)
+                {
+
+                    string downloadString = client.DownloadString("http://api.metro.net/agencies/lametro/vehicles/");
+                    dynamic res = JsonConvert.DeserializeObject(downloadString);
+                    metro.Graphics.Clear();
+                    foreach (dynamic vehicle in res.items)
+                    {
+                        var ploc = new MapPoint(vehicle.longitude.Value, vehicle.latitude.Value, 0, wgs84);
+                        var pmark = new SimpleMarkerSymbol(SimpleMarkerSymbolStyle.Circle, Colors.IndianRed, 8);
+                        var ptest = new Graphic(ploc, pmark);
+                        metro.Graphics.Add(ptest);
+                    }
+
+                    await Task.Delay(1000);
+
+                }
+            });
+
+            MySceneView.GraphicsOverlays.Add(metro);
         }
         public MainWindow()
         {
@@ -240,6 +292,7 @@ namespace arcGIS_test_2
             bike_data();
 
             /* Grab the metro data */
+            metro_data();
 
         }
     }
