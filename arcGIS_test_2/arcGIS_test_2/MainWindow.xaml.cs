@@ -117,21 +117,34 @@ namespace arcGIS_test_2
         {
 
             WebClient client = new WebClient();
-            string downloadString = client.DownloadString("http://public-api.adsbexchange.com/VirtualRadar/AircraftList.json?lat=34&lng=-118.28&fDstL=0&fDstU=100");
-            dynamic res = JsonConvert.DeserializeObject(downloadString);
-
             var wgs84 = MySceneView.Scene.SpatialReference;
-            planes = new GraphicsOverlay();
-            planes.SceneProperties.SurfacePlacement = SurfacePlacement.Relative;
 
-            foreach (dynamic plane in res.acList)
-            {
-                var ploc = new MapPoint(plane.Long.Value, plane.Lat.Value, plane.Alt.Value, wgs84);
-                var pmark = new SimpleMarkerSymbol(SimpleMarkerSymbolStyle.Circle, Colors.Blue, 10);
-                var ptest = new Graphic(ploc, pmark);
-                planes.Graphics.Add(ptest);
-            }
+            planes = new GraphicsOverlay();
+
+            Task.Factory.StartNew(async () => {
+                while (true)
+                {
+                    
+                    planes.SceneProperties.SurfacePlacement = SurfacePlacement.Relative;
+                    string downloadString = client.DownloadString("http://public-api.adsbexchange.com/VirtualRadar/AircraftList.json?lat=34&lng=-118.28&fDstL=0&fDstU=100");
+                    dynamic res = JsonConvert.DeserializeObject(downloadString);
+                    planes.Graphics.Clear();
+                    foreach (dynamic plane in res.acList)
+                    {
+                        var ploc = new MapPoint(plane.Long.Value, plane.Lat.Value, plane.Alt.Value, wgs84);
+                        var pmark = new SimpleMarkerSymbol(SimpleMarkerSymbolStyle.Circle, Colors.Blue, 10);
+                        var ptest = new Graphic(ploc, pmark);
+                        planes.Graphics.Add(ptest);
+                    }
+                    
+                    await Task.Delay(2500);
+                    
+                }
+            });
+
             MySceneView.GraphicsOverlays.Add(planes);
+
+
         }
 
         public MainWindow()
