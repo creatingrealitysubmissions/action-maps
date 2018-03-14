@@ -19,6 +19,8 @@ using Esri.ArcGISRuntime.UI;
 using System.Diagnostics;
 using Esri.ArcGISRuntime.Geometry;
 using Esri.ArcGISRuntime.Symbology;
+using Tweetinvi;
+using Tweetinvi.Models;
 
 namespace arcGIS_test_2
 {
@@ -31,10 +33,23 @@ namespace arcGIS_test_2
         // intercontinental is 34.0498° N, -118.2606° E
         // SD is -117.161087, 32.715736
 
+            //bottom right:
+            // la = 33.895849
+            // lo = -118.220071
+            // top left:
+            // la = 34.100245
+            // lo = -118.459463
+            //
         public MainWindow()
         {
             InitializeComponent();
             Debug.WriteLine("Starting up!");
+
+            /***
+             *  DONT COMMIT ME
+             */
+            var creds = Auth.SetUserCredentials("x", "x", "x", "x");
+
 
             MySceneView.Scene = new Scene(Basemap.CreateTopographic());
             //MySceneView.Scene = new Scene(Basemap.CreateDarkGrayCanvasVector());
@@ -87,6 +102,21 @@ namespace arcGIS_test_2
 
             }
             MySceneView.GraphicsOverlays.Add(go);
+
+            /* set up twitter stuff */
+                var stream = Stream.CreateFilteredStream();
+                var top_left = new Coordinates(34.035199, -118.309177);
+                var bottom_right = new Coordinates(33.996693, -118.2616002);
+            
+            
+                stream.AddLocation(top_left, bottom_right);
+                stream.MatchingTweetReceived += (sender, args) =>
+                {
+                    //args.Tweet.Coordinates;
+                    Console.WriteLine("tweet is '" + args.Tweet + "'");
+                };
+
+                stream.StartStreamMatchingAllConditions();
         }
     }
 }
