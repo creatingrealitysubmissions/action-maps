@@ -112,6 +112,40 @@ namespace arcGIS_test_2
 
             stream.StartStreamMatchingAllConditions();
         }
+
+        GraphicsOverlay bikes;
+        public void bike_data()
+        {
+
+            WebClient client = new WebClient();
+            var wgs84 = MySceneView.Scene.SpatialReference;
+
+            bikes = new GraphicsOverlay();
+            bikes.SceneProperties.SurfacePlacement = SurfacePlacement.Draped;
+
+            Task.Factory.StartNew(async () => {
+                while (true)
+                {
+
+                    string downloadString = client.DownloadString("https://bikeshare.metro.net/stations/json/");
+                    dynamic res = JsonConvert.DeserializeObject(downloadString);
+                    bikes.Graphics.Clear();
+                    foreach (dynamic bike in res.features)
+                    {
+                        var ploc = new MapPoint(bike.properties.longitude.Value, bike.properties.latitude.Value, 0, wgs84);
+                        var pmark = new SimpleMarkerSymbol(SimpleMarkerSymbolStyle.Circle, Colors.Green, 10);
+                        var ptest = new Graphic(ploc, pmark);
+                        bikes.Graphics.Add(ptest);
+                    }
+
+                    await Task.Delay(25000);
+
+                }
+            });
+
+            MySceneView.GraphicsOverlays.Add(bikes);
+        }
+
         GraphicsOverlay planes;
         public void plane_data()
         {
@@ -120,12 +154,13 @@ namespace arcGIS_test_2
             var wgs84 = MySceneView.Scene.SpatialReference;
 
             planes = new GraphicsOverlay();
+            planes.SceneProperties.SurfacePlacement = SurfacePlacement.Relative;
+
 
             Task.Factory.StartNew(async () => {
                 while (true)
                 {
                     
-                    planes.SceneProperties.SurfacePlacement = SurfacePlacement.Relative;
                     string downloadString = client.DownloadString("http://public-api.adsbexchange.com/VirtualRadar/AircraftList.json?lat=34&lng=-118.28&fDstL=0&fDstU=100");
                     dynamic res = JsonConvert.DeserializeObject(downloadString);
                     planes.Graphics.Clear();
@@ -166,10 +201,12 @@ namespace arcGIS_test_2
 
             /* Grab the plane data */
             plane_data();
-            /* Grab the metro data */
 
             /* Grab the bikeshare data */
-           
+            bike_data();
+
+            /* Grab the metro data */
+
         }
     }
 }
