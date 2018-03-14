@@ -34,7 +34,7 @@ namespace android_action_maps
             agSetupScene();
 
             /* add building */
-            //agAddBuilding();
+            agAddBuilding();
 
             /* Demo Dots */
             //agAddDemoPoints();
@@ -49,9 +49,75 @@ namespace android_action_maps
             bike_data();
 
             /* Grab the metro data */
-            // metro_data();
+            metro_data();
         }
 
+
+        #region metro
+
+        public class MetroInnerJSON
+        {
+            public double longitude;
+            public double latitude;
+        }
+
+        public class MetroJSON
+        {
+            public MetroInnerJSON[] items;
+
+        }
+        GraphicsOverlay metro;
+        public void metro_data()
+        {
+            /* first get stops */
+            
+            Task.Factory.StartNew(async () =>
+            {
+                Uri u = new System.Uri("https://services1.arcgis.com/gOY38HDnFUYPDony/ArcGIS/rest/services/la_busstops1217/FeatureServer/1");
+
+                var agsl_stop = new ServiceFeatureTable(u);
+                await agsl_stop.LoadAsync();
+                this.RunOnUiThread(
+                    () =>
+                    {
+                        var stopsLayer = new Esri.ArcGISRuntime.Mapping.FeatureLayer(agsl_stop);
+                        MySceneView.Scene.OperationalLayers.Add(stopsLayer);
+                    });
+            });
+            
+
+            /* then get vehicles */
+
+            WebClient client = new WebClient();
+            var wgs84 = MySceneView.Scene.SpatialReference;
+
+            metro = new GraphicsOverlay();
+            metro.SceneProperties.SurfacePlacement = SurfacePlacement.Draped;
+
+            Task.Factory.StartNew(async () => {
+                while (true)
+                {
+
+                    string downloadString = client.DownloadString("http://api.metro.net/agencies/lametro/vehicles/");
+                    MetroJSON res = JsonConvert.DeserializeObject<MetroJSON>(downloadString);
+                    metro.Graphics.Clear();
+                    foreach (MetroInnerJSON vehicle in res.items)
+                    {
+                        var ploc = new MapPoint(vehicle.longitude, vehicle.latitude, 0, wgs84);
+                        var pmark = new SimpleMarkerSymbol(SimpleMarkerSymbolStyle.Circle, System.Drawing.Color.IndianRed, 8);
+                        var ptest = new Graphic(ploc, pmark);
+                        metro.Graphics.Add(ptest);
+                    }
+
+                    await Task.Delay(2300);
+
+                }
+            });
+
+            MySceneView.GraphicsOverlays.Add(metro);
+        }
+        #endregion
+        #region planes
 
         public class AirplaneInnerJSON
         {
@@ -102,7 +168,8 @@ namespace android_action_maps
 
 
         }
-
+        #endregion
+        #region bikes
         public class BikePropJSON
         {
             public int bikesAvailable;
@@ -151,6 +218,26 @@ namespace android_action_maps
             });
 
             MySceneView.GraphicsOverlays.Add(bikes);
+        }
+        #endregion
+
+        ArcGISSceneLayer agsl;
+        public void agAddBuilding()
+        {
+            Task.Factory.StartNew(async () =>
+            {
+                Uri u = new System.Uri("/mnt/sdcard/LARIAC_BUILDINGS_2014.slpk", UriKind.Relative);
+
+                agsl = new ArcGISSceneLayer(u);
+                await agsl.LoadAsync();
+                this.RunOnUiThread(
+                    () =>
+                    {
+                        MySceneView.Scene.OperationalLayers.Add(agsl);
+                    });
+
+            });
+
         }
         public void agSetupScene()
         {

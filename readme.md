@@ -7,3 +7,5 @@ This project, Action Maps, attempts to demonstrate the power of VR by merging mu
 # Creds
 
 Powered by ESRI's Beta arcGIS SDK, and open data sources from around the web
+
+For building data, you'll need to push LARIAC_BUILDINGS_2014.slpk to /mnt/sdcard with adb
