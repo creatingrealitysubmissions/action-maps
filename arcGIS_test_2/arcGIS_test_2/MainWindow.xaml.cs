@@ -21,6 +21,7 @@ using Esri.ArcGISRuntime.Geometry;
 using Esri.ArcGISRuntime.Symbology;
 using Tweetinvi;
 using Tweetinvi.Models;
+using IrrKlang;
 
 namespace arcGIS_test_2
 {
@@ -33,13 +34,15 @@ namespace arcGIS_test_2
         // intercontinental is 34.0498° N, -118.2606° E
         // SD is -117.161087, 32.715736
 
-            //bottom right:
-            // la = 33.895849
-            // lo = -118.220071
-            // top left:
-            // la = 34.100245
-            // lo = -118.459463
-            //
+        //bottom right:
+        // la = 33.895849
+        // lo = -118.220071
+        // top left:
+        // la = 34.100245
+        // lo = -118.459463
+        //
+
+        ISoundEngine engine;
         public MainWindow()
         {
             InitializeComponent();
@@ -50,6 +53,8 @@ namespace arcGIS_test_2
              */
             var creds = Auth.SetUserCredentials("x", "x", "x", "x");
 
+            /* set up audio stuff */
+            engine = new ISoundEngine();
 
             MySceneView.Scene = new Scene(Basemap.CreateTopographic());
             //MySceneView.Scene = new Scene(Basemap.CreateDarkGrayCanvasVector());
@@ -95,7 +100,9 @@ namespace arcGIS_test_2
                 Task.Factory.StartNew(async () => {
                     while (true)
                     {
-                        buoyTest.Geometry = new MapPoint(-118.2606 + rnd.NextDouble(), 34.0498 + rnd.NextDouble(), rnd.Next(0, 1000));                    
+                        buoyTest.Geometry = new MapPoint(-118.2606 + rnd.NextDouble(), 34.0498 + rnd.NextDouble(), rnd.Next(0, 1000));
+                        engine.Play3D("../../../../bus.wav", -10.0f, 0, 0, false);
+
                         await Task.Delay(100);
                     }
                 });
@@ -103,20 +110,23 @@ namespace arcGIS_test_2
             }
             MySceneView.GraphicsOverlays.Add(go);
 
+#if false
             /* set up twitter stuff */
-                var stream = Stream.CreateFilteredStream();
-                var top_left = new Coordinates(34.035199, -118.309177);
-                var bottom_right = new Coordinates(33.996693, -118.2616002);
+            var stream = Stream.CreateFilteredStream();
+            var top_left = new Coordinates(34.035199, -118.309177);
+            var bottom_right = new Coordinates(33.996693, -118.2616002);
             
             
-                stream.AddLocation(top_left, bottom_right);
-                stream.MatchingTweetReceived += (sender, args) =>
-                {
-                    //args.Tweet.Coordinates;
-                    Console.WriteLine("tweet is '" + args.Tweet + "'");
-                };
+            stream.AddLocation(top_left, bottom_right);
+            stream.MatchingTweetReceived += (sender, args) =>
+            {
+                //args.Tweet.Coordinates;
+                Console.WriteLine("tweet is '" + args.Tweet + "'");
+            };
 
-                stream.StartStreamMatchingAllConditions();
+            stream.StartStreamMatchingAllConditions();
+#endif
+           
         }
     }
 }
