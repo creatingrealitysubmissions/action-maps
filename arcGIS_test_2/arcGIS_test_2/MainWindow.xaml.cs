@@ -50,9 +50,7 @@ namespace arcGIS_test_2
 
         public void agSetupScene()
         {
-            MySceneView.Scene = new Scene(Basemap.CreateTopographic());
-            MySceneView.Scene.OperationalLayers.Add(new ArcGISSceneLayer(new System.Uri("https://tiles.arcgis.com/tiles/Imiq6naek6ZWdour/arcgis/rest/services/San_Diego_Textured_Buildings/SceneServer/layers/0")));
-            MySceneView.Scene.OperationalLayers.Add(new ArcGISSceneLayer(new System.Uri("http://services.arcgis.com/V6ZHFr6zdgNZuVG0/ArcGIS/rest/services/LABuildings_3D/SceneServer")));
+            MySceneView.Scene = new Scene(Basemap.CreateLightGrayCanvasVector());
             MySceneView.Scene.BaseSurface.ElevationSources.Add(new ArcGISTiledElevationSource(new System.Uri("https://elevation3d.arcgis.com/arcgis/rest/services/WorldElevation3D/Terrain3D/ImageServer")));
             //MySceneView.StereoRendering = new SideBySideBarrelDistortionStereoRendering();
             MySceneView.IsAttributionTextVisible = false;
@@ -167,13 +165,26 @@ namespace arcGIS_test_2
                     planes.Graphics.Clear();
                     foreach (dynamic plane in res.acList)
                     {
-                        var ploc = new MapPoint(plane.Long.Value, plane.Lat.Value, plane.Alt.Value, wgs84);
+                        double lo = 0;
+                        double la = 0;
+                        double al = 0;
+                        try
+                        {
+                            lo = plane.Long.Value;
+                            la = plane.Lat.Value;
+                            al = plane.Alt.Value;
+                        }
+                        catch (Exception)
+                        {
+
+                        }
+                        var ploc = new MapPoint(lo, la, al, wgs84);
                         var pmark = new SimpleMarkerSymbol(SimpleMarkerSymbolStyle.Circle, Colors.Blue, 10);
                         var ptest = new Graphic(ploc, pmark);
                         planes.Graphics.Add(ptest);
                     }
                     
-                    await Task.Delay(2500);
+                    await Task.Delay(1250);
                     
                 }
             });
@@ -182,7 +193,26 @@ namespace arcGIS_test_2
 
 
         }
+        ArcGISSceneLayer agsl;
+        public void agAddBuilding()
+        {
+            Task.Factory.StartNew(async () =>
+            {
+                Uri u = new System.Uri("LARIAC_BUILDINGS_2014.slpk", UriKind.Relative);
 
+                agsl = new ArcGISSceneLayer(u);
+                await agsl.LoadAsync();
+                Application.Current.Dispatcher.Invoke(
+                    () =>
+                    {
+        
+                        MySceneView.Scene.OperationalLayers.Add(agsl);
+                    });
+               
+                Debug.WriteLine("building load status: " + agsl.LoadStatus);
+            });
+                
+        }
         public MainWindow()
         {
             InitializeComponent();
@@ -193,6 +223,9 @@ namespace arcGIS_test_2
 
             /* Set up scene */
             agSetupScene();
+
+            /* add building */
+            agAddBuilding();
 
             /* Demo Dots */
             //agAddDemoPoints();
