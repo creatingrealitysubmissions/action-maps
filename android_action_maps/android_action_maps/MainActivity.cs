@@ -14,11 +14,15 @@ using System;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System.Drawing;
+using Tweetinvi;
+using Tweetinvi.Models;
+using Android.Speech.Tts;
+using Android.Runtime;
 
 namespace android_action_maps
 {
     [Activity(Label = "Action Maps", MainLauncher = true, Theme = "@android:style/Theme.Black.NoTitleBar.Fullscreen")]
-    public class MainActivity : Activity
+    public class MainActivity : Activity, TextToSpeech.IOnInitListener
     {
         public SceneView MySceneView;
 
@@ -40,7 +44,7 @@ namespace android_action_maps
             //agAddDemoPoints();
 
             /* Start twitter stream */
-            //twitter_hose();
+            twitter_hose();
 
             /* Grab the plane data */
             plane_data();
@@ -92,6 +96,9 @@ namespace android_action_maps
             var wgs84 = MySceneView.Scene.SpatialReference;
 
             metro = new GraphicsOverlay();
+            
+            var pmark = new SimpleMarkerSymbol(SimpleMarkerSymbolStyle.Circle, System.Drawing.Color.IndianRed, 8);
+            metro.Renderer = new SimpleRenderer(pmark);
             metro.SceneProperties.SurfacePlacement = SurfacePlacement.Draped;
 
             Task.Factory.StartNew(async () => {
@@ -104,8 +111,7 @@ namespace android_action_maps
                     foreach (MetroInnerJSON vehicle in res.items)
                     {
                         var ploc = new MapPoint(vehicle.longitude, vehicle.latitude, 0, wgs84);
-                        var pmark = new SimpleMarkerSymbol(SimpleMarkerSymbolStyle.Circle, System.Drawing.Color.IndianRed, 8);
-                        var ptest = new Graphic(ploc, pmark);
+                        var ptest = new Graphic(ploc);
                         metro.Graphics.Add(ptest);
                     }
 
@@ -142,6 +148,9 @@ namespace android_action_maps
             planes = new GraphicsOverlay();
             planes.SceneProperties.SurfacePlacement = SurfacePlacement.Relative;
 
+            var pmark = new SimpleMarkerSymbol(SimpleMarkerSymbolStyle.Circle, System.Drawing.Color.Blue, 10f);
+            planes.Renderer = new SimpleRenderer(pmark);
+            
 
             Task.Factory.StartNew(async () => {
                 while (true)
@@ -152,10 +161,8 @@ namespace android_action_maps
                     planes.Graphics.Clear();
                     foreach (AirplaneInnerJSON plane in res.acList)
                     {
-                        
                         var ploc = new MapPoint(plane.Long, plane.Lat, plane.Alt, wgs84);
-                        var pmark = new SimpleMarkerSymbol(SimpleMarkerSymbolStyle.Circle,System.Drawing.Color.Blue, 10f);
-                        var ptest = new Graphic(ploc, pmark);
+                        var ptest = new Graphic(ploc);
                         planes.Graphics.Add(ptest);
                     }
 
@@ -221,6 +228,48 @@ namespace android_action_maps
         }
         #endregion
 
+
+        #region twitter
+        
+      
+        public void twitter_hose()
+        {
+
+            #region SECRETS
+
+            /***
+             *  DONT COMMIT ME
+             */
+            var creds = Auth.SetUserCredentials("", "", "", "");
+            /***
+             *  DONT COMMIT ME
+             */
+            #endregion
+
+
+            // SpeechSynthesizer synth = new SpeechSynthesizer();
+            TextToSpeech ttobj = new TextToSpeech(Application.Context, this);
+           
+            /* set up twitter stuff */
+            var stream = Stream.CreateFilteredStream();
+            var top_left = new Coordinates(34.035199, -118.309177);
+            var bottom_right = new Coordinates(33.996693, -118.2616002);
+
+            stream.AddLocation(top_left, bottom_right);
+            stream.MatchingTweetReceived += (sender, args) =>
+            {
+                
+                /* speech synth */
+                ttobj.Speak(args.Tweet.CreatedBy.ScreenName + ": " + args.Tweet.Text, QueueMode.Flush, null, null);
+            };
+
+            Task.Factory.StartNew(async () =>
+            {
+                stream.StartStreamMatchingAllConditions();
+            });
+        }
+        #endregion
+
         ArcGISSceneLayer agsl;
         public void agAddBuilding()
         {
@@ -241,7 +290,8 @@ namespace android_action_maps
         }
         public void agSetupScene()
         {
-            MySceneView.Scene = new Scene(Basemap.CreateLightGrayCanvasVector());
+            MySceneView.Scene = new Scene(Basemap.CreateLightGrayCanvas());
+            
             MySceneView.Scene.BaseSurface.ElevationSources.Add(new ArcGISTiledElevationSource(new System.Uri("https://elevation3d.arcgis.com/arcgis/rest/services/WorldElevation3D/Terrain3D/ImageServer")));
             
             MySceneView.StereoRendering = new SideBySideBarrelDistortionStereoRendering();
@@ -255,9 +305,15 @@ namespace android_action_maps
   
             var phoneSensors = new PhoneMotionDataSource();
             fpcController.DeviceMotionDataSource = phoneSensors;
+            fpcController.Framerate = FirstPersonFrameRate.Speed; 
             MySceneView.CameraController = fpcController;
             phoneSensors.StartUpdatingAngles(false);
 
+        }
+
+        public void OnInit([GeneratedEnum] OperationResult status)
+        {
+           // throw new NotImplementedException();
         }
     }
 
