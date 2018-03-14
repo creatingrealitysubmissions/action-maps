@@ -243,12 +243,21 @@ namespace android_action_maps
         {
             MySceneView.Scene = new Scene(Basemap.CreateLightGrayCanvasVector());
             MySceneView.Scene.BaseSurface.ElevationSources.Add(new ArcGISTiledElevationSource(new System.Uri("https://elevation3d.arcgis.com/arcgis/rest/services/WorldElevation3D/Terrain3D/ImageServer")));
-            //MySceneView.StereoRendering = new SideBySideBarrelDistortionStereoRendering();
+            
+            MySceneView.StereoRendering = new SideBySideBarrelDistortionStereoRendering();
             MySceneView.IsAttributionTextVisible = false;
 
             // USC
-            var camera = new Camera(34.02209, -118.2853, 1000, 0, 45, 0);
+            var camera = new Camera(34.02209, -118.2853, 300, 0, 0, 0);
             MySceneView.SetViewpointCamera(camera);
+
+            var fpcController = new FirstPersonCameraController(camera);
+  
+            var phoneSensors = new PhoneMotionDataSource();
+            fpcController.DeviceMotionDataSource = phoneSensors;
+            MySceneView.CameraController = fpcController;
+            phoneSensors.StartUpdatingAngles(false);
+
         }
     }
 
