@@ -133,7 +133,8 @@ namespace arcGIS_test_2
                     foreach (dynamic bike in res.features)
                     {
                         var ploc = new MapPoint(bike.properties.longitude.Value, bike.properties.latitude.Value, 0, wgs84);
-                        var pmark = new SimpleMarkerSymbol(SimpleMarkerSymbolStyle.Circle, Colors.Green, 10);
+                        float full = (bike.properties.bikesAvailable.Value + 0.1f) / (bike.properties.totalDocks.Value + 0.1f);
+                        var pmark = new SimpleMarkerSymbol(SimpleMarkerSymbolStyle.Circle, Color.FromArgb(255, 0, (byte)(255*full), 0), 10);
                         var ptest = new Graphic(ploc, pmark);
                         bikes.Graphics.Add(ptest);
                     }
