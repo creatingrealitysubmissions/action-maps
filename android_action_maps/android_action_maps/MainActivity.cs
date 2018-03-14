@@ -18,11 +18,12 @@ using Tweetinvi;
 using Tweetinvi.Models;
 using Android.Speech.Tts;
 using Android.Runtime;
+using System.Text.RegularExpressions;
 
 namespace android_action_maps
 {
     [Activity(Label = "Action Maps", MainLauncher = true, Theme = "@android:style/Theme.Black.NoTitleBar.Fullscreen")]
-    public class MainActivity : Activity, TextToSpeech.IOnInitListener
+    public class MainActivity : Activity, TextToSpeech.IOnInitListener, Android.Hardware.ISensorEventListener
     {
         public SceneView MySceneView;
 
@@ -54,8 +55,70 @@ namespace android_action_maps
 
             /* Grab the metro data */
             metro_data();
+
+            /* init the xlrometer */
+            /*
+            var sensorManager = GetSystemService(SensorService) as Android.Hardware.SensorManager;
+            var sensor = sensorManager.GetDefaultSensor(Android.Hardware.SensorType.Accelerometer);
+            sensorManager.RegisterListener(this, sensor, Android.Hardware.SensorDelay.Game);
+            */
+
+        }
+        #region Android.Hardware.ISensorEventListener implementation
+
+
+        bool hasUpdated = false;
+        DateTime lastUpdate;
+        float last_x = 0.0f;
+        float last_y = 0.0f;
+        float last_z = 0.0f;
+
+        const int ShakeDetectionTimeLapse = 250;
+        const double ShakeThreshold = 500;
+
+        public void OnAccuracyChanged(Android.Hardware.Sensor sensor, Android.Hardware.SensorStatus accuracy)
+        {
         }
 
+        public void OnSensorChanged(Android.Hardware.SensorEvent e)
+        {
+            if (e.Sensor.Type == Android.Hardware.SensorType.Accelerometer)
+            {
+                float x = e.Values[0];
+                float y = e.Values[1];
+                float z = e.Values[2];
+
+                DateTime curTime = System.DateTime.Now;
+                if (hasUpdated == false)
+                {
+                    hasUpdated = true;
+                    lastUpdate = curTime;
+                    last_x = x;
+                    last_y = y;
+                    last_z = z;
+                }
+                else
+                {
+                    if ((curTime - lastUpdate).TotalMilliseconds > ShakeDetectionTimeLapse)
+                    {
+                        float diffTime = (float)(curTime - lastUpdate).TotalMilliseconds;
+                        lastUpdate = curTime;
+                        float total = x + y + z - last_x - last_y - last_z;
+                        float speed = Math.Abs(total) / diffTime * 10000;
+
+                        if (speed > ShakeThreshold)
+                        {
+                            swapCamera();
+                        }
+
+                        last_x = x;
+                        last_y = y;
+                        last_z = z;
+                    }
+                }
+            }
+        }
+        #endregion
 
         #region metro
 
@@ -85,6 +148,10 @@ namespace android_action_maps
                     () =>
                     {
                         var stopsLayer = new Esri.ArcGISRuntime.Mapping.FeatureLayer(agsl_stop);
+                        
+                        var stopmark = new SimpleMarkerSymbol(SimpleMarkerSymbolStyle.Circle, System.Drawing.Color.Yellow, 4f);
+                        stopsLayer.Renderer = new SimpleRenderer(stopmark);
+
                         MySceneView.Scene.OperationalLayers.Add(stopsLayer);
                     });
             });
@@ -97,7 +164,7 @@ namespace android_action_maps
 
             metro = new GraphicsOverlay();
             
-            var pmark = new SimpleMarkerSymbol(SimpleMarkerSymbolStyle.Circle, System.Drawing.Color.IndianRed, 8);
+            var pmark = new SimpleMarkerSymbol(SimpleMarkerSymbolStyle.Circle, System.Drawing.Color.IndianRed, 4f);
             metro.Renderer = new SimpleRenderer(pmark);
             metro.SceneProperties.SurfacePlacement = SurfacePlacement.Draped;
 
@@ -148,7 +215,7 @@ namespace android_action_maps
             planes = new GraphicsOverlay();
             planes.SceneProperties.SurfacePlacement = SurfacePlacement.Relative;
 
-            var pmark = new SimpleMarkerSymbol(SimpleMarkerSymbolStyle.Circle, System.Drawing.Color.Blue, 10f);
+            var pmark = new SimpleMarkerSymbol(SimpleMarkerSymbolStyle.Circle, System.Drawing.Color.Blue, 4f);
             planes.Renderer = new SimpleRenderer(pmark);
             
 
@@ -214,7 +281,7 @@ namespace android_action_maps
                     {
                         var ploc = new MapPoint(bike.properties.longitude, bike.properties.latitude, 0, wgs84);
                         float full = (bike.properties.bikesAvailable + 0.1f) / (bike.properties.totalDocks + 0.1f);
-                        var pmark = new SimpleMarkerSymbol(SimpleMarkerSymbolStyle.Circle, Color.FromArgb(255, 0, (byte)(255 * full), 0), 10);
+                        var pmark = new SimpleMarkerSymbol(SimpleMarkerSymbolStyle.Circle, Color.FromArgb(255, 0, (byte)(255 * full), 0), 4);
                         var ptest = new Graphic(ploc, pmark);
                         bikes.Graphics.Add(ptest);
                     }
@@ -258,9 +325,12 @@ namespace android_action_maps
             stream.AddLocation(top_left, bottom_right);
             stream.MatchingTweetReceived += (sender, args) =>
             {
-                
+
+                if (ttobj.IsSpeaking)
+                    return; // don't cut myself off
+
                 /* speech synth */
-                ttobj.Speak(args.Tweet.CreatedBy.ScreenName + ": " + args.Tweet.Text, QueueMode.Flush, null, null);
+                ttobj.Speak(args.Tweet.CreatedBy.ScreenName + ": " + Regex.Replace(args.Tweet.Text, @"http[^\s]+", ""), QueueMode.Flush, null, null);
             };
 
             Task.Factory.StartNew(async () =>
@@ -288,9 +358,48 @@ namespace android_action_maps
             });
 
         }
+
+        Camera camera;
+        int cam_pos = 0;
+        void swapCamera()
+        {
+            cam_pos++;
+            if (cam_pos > 3)
+            {
+                cam_pos = 0;
+            }
+
+            if (cam_pos == 0)
+            {
+                // USC
+                fpcController.InitialPosition = new Camera(34.02209, -118.2853, 300, 0, 0, 0);
+                Toast.MakeText(this, "USC", ToastLength.Short).Show();
+            }
+            else if (cam_pos == 1)
+            {
+                // DOWNTOWN LOW
+                fpcController.InitialPosition = new Camera(34.048008, -118.257687, 300, 0, 0, 0);
+                Toast.MakeText(this, "DTLA", ToastLength.Short).Show();
+            }
+            else if (cam_pos == 2)
+            {
+                // DOWNTOWN HI
+                fpcController.InitialPosition = new Camera(34.048008, -118.257687, 1000, 0, 0, 0);
+                Toast.MakeText(this, "DTLA_HIGH", ToastLength.Short).Show();
+            }
+            else if (cam_pos == 3)
+            {
+                // LONG BEACH
+                fpcController.InitialPosition = new Camera(33.7708569, -118.2459313, 1500, 0, 0, 0);
+                Toast.MakeText(this, "LONGBEACH", ToastLength.Short).Show();
+            }
+
+        }
+        FirstPersonCameraController fpcController;
         public void agSetupScene()
         {
-            MySceneView.Scene = new Scene(Basemap.CreateLightGrayCanvas());
+            //MySceneView.Scene = new Scene(Basemap.CreateLightGrayCanvas());
+            MySceneView.Scene = new Scene(Basemap.CreateOceans());
             
             MySceneView.Scene.BaseSurface.ElevationSources.Add(new ArcGISTiledElevationSource(new System.Uri("https://elevation3d.arcgis.com/arcgis/rest/services/WorldElevation3D/Terrain3D/ImageServer")));
             
@@ -298,14 +407,19 @@ namespace android_action_maps
             MySceneView.IsAttributionTextVisible = false;
 
             // USC
-            var camera = new Camera(34.02209, -118.2853, 300, 0, 0, 0);
+            //camera = new Camera(34.02209, -118.2853, 300, 0, 0, 0);
+
+            // downtown high
+            camera = new Camera(34.048008, -118.257687, 1000, 0, 0, 0);
+            
+
             MySceneView.SetViewpointCamera(camera);
 
-            var fpcController = new FirstPersonCameraController(camera);
-  
+            fpcController = new FirstPersonCameraController(camera);
+
             var phoneSensors = new PhoneMotionDataSource();
             fpcController.DeviceMotionDataSource = phoneSensors;
-            fpcController.Framerate = FirstPersonFrameRate.Speed; 
+            fpcController.Framerate = FirstPersonFrameRate.Speed;
             MySceneView.CameraController = fpcController;
             phoneSensors.StartUpdatingAngles(false);
 
