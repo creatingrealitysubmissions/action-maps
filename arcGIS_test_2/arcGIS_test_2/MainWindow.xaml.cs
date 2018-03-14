@@ -1,18 +1,7 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
-using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Documents;
-using System.Windows.Input;
 using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Navigation;
-using System.Windows.Shapes;
-using Esri.ArcGISRuntime;
 using Esri.ArcGISRuntime.Mapping;
 using Esri.ArcGISRuntime.Data;
 using Esri.ArcGISRuntime.UI;
@@ -24,6 +13,8 @@ using Tweetinvi.Models;
 using IrrKlang;
 using System.Net;
 using Newtonsoft.Json;
+using System.Speech.Synthesis;
+
 
 namespace arcGIS_test_2
 {
@@ -85,8 +76,12 @@ namespace arcGIS_test_2
             }
             MySceneView.GraphicsOverlays.Add(go);
         }
+
+      
+
         public void twitter_hose()
         {
+
             /***
              *  DONT COMMIT ME
              */
@@ -95,20 +90,30 @@ namespace arcGIS_test_2
              *  DONT COMMIT ME
              */
 
+            SpeechSynthesizer synth = new SpeechSynthesizer();
+            synth.SetOutputToDefaultAudioDevice();
+            synth.SelectVoice("Microsoft Zira Desktop");
+
+
             /* set up twitter stuff */
             var stream = Stream.CreateFilteredStream();
             var top_left = new Coordinates(34.035199, -118.309177);
             var bottom_right = new Coordinates(33.996693, -118.2616002);
 
-
             stream.AddLocation(top_left, bottom_right);
             stream.MatchingTweetReceived += (sender, args) =>
             {
                 //XXX Todo: put this in the world somewhere, or TTS?
-                Console.WriteLine("tweet is '" + args.Tweet + "'");
+                //Console.WriteLine("tweet is '" + args.Tweet + "'");
+                
+                /* speech synth */
+                synth.Speak(args.Tweet.CreatedBy.ScreenName + ": " + args.Tweet.Text);
             };
 
-            stream.StartStreamMatchingAllConditions();
+            Task.Factory.StartNew(async () =>
+            {
+                stream.StartStreamMatchingAllConditions();
+            });
         }
 
         GraphicsOverlay bikes;
@@ -283,7 +288,7 @@ namespace arcGIS_test_2
             //agAddDemoPoints();
 
             /* Start twitter stream */
-            //twitter_hose();
+            twitter_hose();
 
             /* Grab the plane data */
             plane_data();
